@@ -1,0 +1,106 @@
+﻿@page "/kupony"
+@using Typerek.Database
+@using Radzen
+@using Radzen.Blazor
+@code{
+
+    [Inject]
+    NavigationManager navigationManager { get; set; }
+
+    [Inject]
+    NotificationService notificationService { get; set; }
+
+    public class KuponItem
+    {
+        public int Id { get; set; }
+        public string DataUtworzenia { get; set; }
+        public int LiczbaZdarzen { get; set; }
+        public decimal Kurs { get; set; }
+        public bool? Wynik { get; set; }
+        public string Status { get; set; }
+    }
+
+    public List<KuponItem> kupony;
+
+    protected override void OnInitialized()
+    {
+        Reload();
+    }
+    private void Reload()
+    {
+        kupony = (from k in Startup.entityContext.Kupons
+                  join s in Startup.entityContext.KuponStatus on k.Status equals s.Id
+                  join z in Startup.entityContext.Zdarzenies on k.Id equals z.KuponId into t1
+                  from zz in t1.DefaultIfEmpty()
+                  group zz by new { k.Id, k.DataUtworzenia, k.Kurs, k.Wynik, Status = s.Nazwa } into grp
+                  select new KuponItem
+                  {
+                      Id = grp.Key.Id,
+                      Status = grp.Key.Status,
+                      Kurs = grp.Key.Kurs,
+                      Wynik = grp.Key.Wynik,
+                      DataUtworzenia = grp.Key.DataUtworzenia.ToString("yyyy-MM-dd"),
+                      LiczbaZdarzen = grp.Count(t => t != null),
+                  }).ToList();
+
+
+    }
+    async Task OpenKupon(int Id)
+    {
+        navigationManager.NavigateTo("zdarzenia/" + Id);
+    }
+    async Task CreateKupon()
+    {
+        Startup.entityContext.Kupons.Add(new Kupon());
+        Startup.entityContext.SaveChanges();
+        Reload();
+    }
+    async Task DeleteKupon(int Id)
+    {
+        if (Startup.entityContext.Kupons.Where(k => k.Id == Id).First().Status > 2)
+        {
+            notificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Uwaga", Detail = "Usuwać można tylko niezatwierdzone kupony", Duration = 3000 });
+            return;
+        }
+        if (Startup.entityContext.Zdarzenies.Where(k => k.KuponId == Id).Any())
+        {
+            notificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Uwaga", Detail = "Usuwać można tylko puste kupony", Duration = 3000 });
+            return;
+        }
+
+        Startup.entityContext.Kupons.Remove(Startup.entityContext.Kupons.Where(k => k.Id == Id).First());
+        Startup.entityContext.SaveChanges();
+        Reload();
+    }
+
+    void CellRender(DataGridCellRenderEventArgs<KuponItem> args)
+    {
+        if (args.Data.Wynik.HasValue && args.Column.Property == "Wynik")
+            args.Attributes.Add("style", "background-color:" + (args.Data.Wynik.Value ? "rgba(80, 255, 80, .5)" : "rgba(255, 120, 120, .75)"));
+    }
+}
+
+
+<RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" PageSize="5" AllowPaging="true" AllowSorting="true"
+                Data="@kupony" TItem="KuponItem" LogicalFilterOperator="LogicalFilterOperator.Or" CellRender="@CellRender">
+    <Columns>
+        <RadzenDataGridColumn TItem="KuponItem" Property="Id" Title="Id" Width="70px" />
+        <RadzenDataGridColumn TItem="KuponItem" Property="DataUtworzenia" Title="Data utworzenia" />
+        <RadzenDataGridColumn TItem="KuponItem" Property="LiczbaZdarzen" Title="Liczba zdarzeń" />
+        <RadzenDataGridColumn TItem="KuponItem" Property="Kurs" Title="Łączny kurs" />
+        <RadzenDataGridColumn TItem="KuponItem" Property="Wynik" Title="Wynik" />
+        <RadzenDataGridColumn TItem="KuponItem" Property="Status" Title="Status" />
+        <RadzenDataGridColumn Width="200px" TItem="KuponItem" Property="Id" Title="Otwórz">
+            <Template Context="data">
+                <RadzenButton ButtonStyle="ButtonStyle.Info" Click=@(() => OpenKupon(data.Id)) Text="Otwórz kupon" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="KuponItem" Property="Id" Title="Usuń">
+            <Template Context="data">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Click=@(() => DeleteKupon(data.Id)) Text="Usuń" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<RadzenButton ButtonStyle="ButtonStyle.Primary" Click="@(() => CreateKupon())" Text="Utwórz nowy kupon" />

@@ -1,0 +1,59 @@
+﻿@using Radzen;
+@using Radzen.Blazor;
+@using static Typerek.Pages.Zdarzenia
+@code
+{
+    [Inject]
+    DialogService DialogService { get; set; }
+    ZdarzenieItem model = new ZdarzenieItem();
+
+    void OnSubmit(ZdarzenieItem model)
+    {
+        DialogService.Close(model);
+    }
+}
+
+<RadzenTemplateForm TItem="ZdarzenieItem" Data="@model" Submit=@OnSubmit>
+    <div class="row" style="margin-bottom: 16px">
+        <div class="col-md-3">
+            <RadzenLabel Text="Zdarzenie" />
+        </div>
+        <div class="col">
+            <RadzenTextBox @bind-Value="@model.Zdarzenie" Name="Zdarzenie" />
+            <RadzenRequiredValidator Text="Nazwa zdarzenia jest wymagana" Component="Zdarzenie" />
+        </div>
+    </div>
+    <div class="row" style="margin-bottom: 16px">
+        <div class="col-md-3">
+            <RadzenLabel Text="Rodzaj" />
+        </div>
+        <div class="col">
+            <RadzenTextBox @bind-Value="@model.Rodzaj" Name="Rodzaj" />
+            <RadzenRequiredValidator Text="Rodzaj zakładu jest wymagany" Component="Rodzaj" />
+        </div>
+    </div>
+    <div class="row" style="margin-bottom: 16px">
+        <div class="col-md-3">
+            <RadzenLabel Text="Typ" />
+        </div>
+        <div class="col">
+            <RadzenTextBox @bind-Value="@model.Typ" Name="Typ" />
+            <RadzenRequiredValidator Text="Typ jest wymagany" Component="Typ" />
+        </div>
+    </div>
+    <div class="row" style="margin-bottom: 16px">
+        <div class="col-md-3">
+            <RadzenLabel Text="Kurs" />
+        </div>
+        <div class="col">
+            <RadzenNumeric TValue="decimal" Format="0.00" @bind-Value=@model.Kurs Name="Kurs"/>
+            <RadzenRequiredValidator Text="Kurs jest wymagany" Component="Kurs" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3"></div>
+        <div class="col">
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Dodaj" />
+        </div>
+    </div>
+</RadzenTemplateForm>

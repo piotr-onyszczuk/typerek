@@ -1,0 +1,152 @@
+﻿@page "/zdarzenia/{id}"
+@using Typerek.Database
+@using Radzen
+@using Radzen.Blazor
+@code{
+        [Parameter]
+        public string Id { get; set; }
+
+        [Inject]
+        NavigationManager navigationManager { get; set; }
+
+        [Inject]
+        NotificationService notificationService { get; set; }
+
+        [Inject]
+        DialogService dialogService { get; set; }
+
+    public class ZdarzenieItem
+    {
+        public int Id { get; set; }
+        public string Zdarzenie { get; set; }
+        public string Rodzaj { get; set; }
+        public string Typ { get; set; }
+        public decimal Kurs { get; set; }
+        public bool? Wynik { get; set; }
+    }
+
+    public List<ZdarzenieItem> zdarzenia;
+    public Kupon kupon;
+
+    public void RefreshKuponData()
+    {
+        if (int.TryParse(Id, out int id))
+        {
+            Reload();
+            decimal kurs = 1;
+            bool? wynik = null;
+            if (zdarzenia.Any())
+            {
+                kurs = zdarzenia.Select(z => z.Kurs).Aggregate((a, b) => a * b);
+                if (zdarzenia.All(z => z.Wynik.HasValue))
+                {
+                    if (zdarzenia.All(z => z.Wynik.Value)) wynik = true;
+                    else wynik = false;
+                }
+            }
+
+            var kupon = Startup.entityContext.Kupons.Where(k => k.Id == id).First();
+            kupon.Kurs = kurs;
+            kupon.Wynik = wynik;
+            Startup.entityContext.Update(kupon);
+            Startup.entityContext.SaveChanges();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Reload();
+    }
+
+    private void Reload()
+    {
+        int id;
+        if (!int.TryParse(Id, out id))
+        { id = -1; zdarzenia = new List<ZdarzenieItem>(); }
+
+        kupon = Startup.entityContext.Kupons.Where(k => k.Id == id).First();
+        zdarzenia = (from z in Startup.entityContext.Zdarzenies
+                     where z.KuponId == id
+                     select new ZdarzenieItem
+                     {
+                         Id = z.Id,
+                         Zdarzenie = z.Zdarzenie_,
+                         Rodzaj = z.Rodzaj,
+                         Typ = z.Typ,
+                         Kurs = z.Kurs,
+                         Wynik = z.Wynik
+                     }).ToList();
+
+
+    }
+
+    async Task Back()
+    {
+        navigationManager.NavigateTo("kupony");
+    }
+
+    void CellRender(DataGridCellRenderEventArgs<ZdarzenieItem> args)
+    {
+        if (args.Data.Wynik.HasValue && args.Column.Property == "Wynik")
+            args.Attributes.Add("style", "background-color:" + (args.Data.Wynik.Value ? "rgba(80, 255, 80, .5)" : "rgba(255, 120, 120, .75)"));
+    }
+
+    async Task AddZdarzenie()
+    {
+        ZdarzenieItem data = await dialogService.OpenAsync<DodajZdarzenie>("Dodaj zdarzenie");
+        if (data != null && int.TryParse(Id, out int id))
+        {
+            Startup.entityContext.Zdarzenies.Add(new Zdarzenie()
+            {
+                Zdarzenie_ = data.Zdarzenie,
+                Rodzaj = data.Rodzaj,
+                Typ = data.Typ,
+                Kurs = data.Kurs,
+                KuponId = id
+            });
+
+            if (kupon.Status == 1) kupon.Status = 2;
+            Startup.entityContext.Kupons.Update(kupon);
+
+            Startup.entityContext.SaveChanges();
+
+            RefreshKuponData();
+        }
+    }
+
+    async Task DeleteZdarzenie(int Id)
+    {
+        if (kupon.Status > 2)
+        {
+            notificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Uwaga", Detail = "Nie można usunąć zdarzenia z zatwierdzonego kuponu", Duration = 3000 });
+            return;
+        }
+        if (Startup.entityContext.Zdarzenies.Where(z => z.Id == Id).First().Wynik.HasValue)
+        {
+            notificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Uwaga", Detail = "Nie można usunąć zdarzenia z wynikiem", Duration = 3000 });
+            return;
+        }
+        Startup.entityContext.Zdarzenies.Remove(Startup.entityContext.Zdarzenies.Where(k => k.Id == Id).First());
+        Startup.entityContext.SaveChanges();
+        RefreshKuponData();
+    }
+
+}
+<RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" PageSize="5" AllowPaging="true" AllowSorting="true"
+                Data="@zdarzenia" TItem="ZdarzenieItem" LogicalFilterOperator="LogicalFilterOperator.Or" CellRender="@CellRender">
+    <Columns>
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Zdarzenie" Title="Zdarzenie" />
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Rodzaj" Title="Rodzaj" />
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Typ" Title="Typ" />
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Kurs" Title="Kurs" />
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Wynik" Title="Wynik" />
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Id" Title="Usuń">
+            <Template Context="data">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Click=@(() => DeleteZdarzenie(data.Id)) Text="Usuń" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<RadzenButton ButtonStyle="ButtonStyle.Primary" Click="@(() => Back())" Text="Wróć" />
+<RadzenButton ButtonStyle="ButtonStyle.Primary" Click="@(() => AddZdarzenie())" Text="Dodaj zdarzenie" Visible="@(kupon.Status==1 || kupon.Status==2)" />
