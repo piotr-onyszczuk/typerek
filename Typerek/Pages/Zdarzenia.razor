@@ -3,17 +3,17 @@
 @using Radzen
 @using Radzen.Blazor
 @code{
-        [Parameter]
-        public string Id { get; set; }
+    [Parameter]
+    public string Id { get; set; }
 
-        [Inject]
-        NavigationManager navigationManager { get; set; }
+    [Inject]
+    NavigationManager navigationManager { get; set; }
 
-        [Inject]
-        NotificationService notificationService { get; set; }
+    [Inject]
+    NotificationService notificationService { get; set; }
 
-        [Inject]
-        DialogService dialogService { get; set; }
+    [Inject]
+    DialogService dialogService { get; set; }
 
     public class ZdarzenieItem
     {
@@ -48,6 +48,8 @@
             var kupon = Startup.entityContext.Kupons.Where(k => k.Id == id).First();
             kupon.Kurs = kurs;
             kupon.Wynik = wynik;
+            if (kupon.Wynik.HasValue) kupon.Status = 4;
+
             Startup.entityContext.Update(kupon);
             Startup.entityContext.SaveChanges();
         }
@@ -110,22 +112,45 @@
 
             Startup.entityContext.SaveChanges();
 
+            Reload();
+        }
+    }
+
+    async Task ConfirmKupon()
+    {
+        if (int.TryParse(Id, out int id))
+        {
+            if (zdarzenia.Count == 0)
+            {
+                notificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Uwaga", Detail = "Nie można zatwierdzić pustego kuponu", Duration = 3000 });
+                return;
+            }
+            if (kupon.Status == 2) kupon.Status = 3;
+            Startup.entityContext.Kupons.Update(kupon);
+
+            Startup.entityContext.SaveChanges();
+
             RefreshKuponData();
         }
     }
 
+    async Task Result(int id, bool result)
+    {
+        var zdarzenie = Startup.entityContext.Zdarzenies.Where(z => z.Id == id).First();
+        if (zdarzenie != null)
+        {
+            zdarzenie.Wynik = result;
+            Startup.entityContext.Zdarzenies.Update(zdarzenie);
+            Startup.entityContext.SaveChanges();
+            RefreshKuponData();
+        }
+        else
+        {
+            Reload();
+        }
+    }
     async Task DeleteZdarzenie(int Id)
     {
-        if (kupon.Status > 2)
-        {
-            notificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Uwaga", Detail = "Nie można usunąć zdarzenia z zatwierdzonego kuponu", Duration = 3000 });
-            return;
-        }
-        if (Startup.entityContext.Zdarzenies.Where(z => z.Id == Id).First().Wynik.HasValue)
-        {
-            notificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Uwaga", Detail = "Nie można usunąć zdarzenia z wynikiem", Duration = 3000 });
-            return;
-        }
         Startup.entityContext.Zdarzenies.Remove(Startup.entityContext.Zdarzenies.Where(k => k.Id == Id).First());
         Startup.entityContext.SaveChanges();
         RefreshKuponData();
@@ -140,7 +165,17 @@
         <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Typ" Title="Typ" />
         <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Kurs" Title="Kurs" />
         <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Wynik" Title="Wynik" />
-        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Id" Title="Usuń">
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Id" Title="Sukces" Visible="@(kupon.Status==3)">
+            <Template Context="data">
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Click=@(() => Result(data.Id,true)) Text="Sukces" Visible="@(!data.Wynik.HasValue)" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Id" Title="Porażka" Visible="@(kupon.Status==3)">
+            <Template Context="data">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Click=@(() => Result(data.Id,false)) Text="Porażka" Visible="@(!data.Wynik.HasValue)"  />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ZdarzenieItem" Property="Id" Title="Usuń" Visible="@(kupon.Status==2)">
             <Template Context="data">
                 <RadzenButton ButtonStyle="ButtonStyle.Danger" Click=@(() => DeleteZdarzenie(data.Id)) Text="Usuń" />
             </Template>
@@ -150,3 +185,4 @@
 
 <RadzenButton ButtonStyle="ButtonStyle.Primary" Click="@(() => Back())" Text="Wróć" />
 <RadzenButton ButtonStyle="ButtonStyle.Primary" Click="@(() => AddZdarzenie())" Text="Dodaj zdarzenie" Visible="@(kupon.Status==1 || kupon.Status==2)" />
+<RadzenButton ButtonStyle="ButtonStyle.Primary" Click="@(() => ConfirmKupon())" Text="Zatwierdz kupon" Visible="@(kupon.Status==2)" />
