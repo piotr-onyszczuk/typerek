@@ -23,6 +23,7 @@
         public string Typ { get; set; }
         public decimal Kurs { get; set; }
         public bool? Wynik { get; set; }
+        public int? RodzajId { get; set; }
     }
 
     public List<ZdarzenieItem> zdarzenia;
@@ -68,12 +69,14 @@
 
         kupon = Startup.entityContext.Kupons.Where(k => k.Id == id).First();
         zdarzenia = (from z in Startup.entityContext.Zdarzenies
+                     join rz in Startup.entityContext.RodzajZdarzenias on z.RodzajId equals rz.Id
                      where z.KuponId == id
                      select new ZdarzenieItem
                      {
                          Id = z.Id,
                          Zdarzenie = z.Zdarzenie_,
-                         Rodzaj = z.Rodzaj,
+                         Rodzaj = rz.Nazwa,
+                         RodzajId = rz.Id,
                          Typ = z.Typ,
                          Kurs = z.Kurs,
                          Wynik = z.Wynik
@@ -101,7 +104,7 @@
             Startup.entityContext.Zdarzenies.Add(new Zdarzenie()
             {
                 Zdarzenie_ = data.Zdarzenie,
-                Rodzaj = data.Rodzaj,
+                RodzajId = data.RodzajId.Value,
                 Typ = data.Typ,
                 Kurs = data.Kurs,
                 KuponId = id

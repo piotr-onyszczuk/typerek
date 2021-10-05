@@ -7,6 +7,12 @@
     DialogService DialogService { get; set; }
     ZdarzenieItem model = new ZdarzenieItem();
 
+    List<Database.RodzajZdarzenia> rodzajZdarzenia = new List<Database.RodzajZdarzenia>();
+    protected override void OnInitialized()
+    {
+        rodzajZdarzenia = Startup.entityContext.RodzajZdarzenias.ToList();
+    }
+
     void OnSubmit(ZdarzenieItem model)
     {
         DialogService.Close(model);
@@ -28,7 +34,10 @@
             <RadzenLabel Text="Rodzaj" />
         </div>
         <div class="col">
-            <RadzenTextBox @bind-Value="@model.Rodzaj" Name="Rodzaj" />
+            <RadzenDropDown AllowClear="false" Name="Rodzaj"
+                            Data=@(rodzajZdarzenia)
+                            @bind-Value=@model.RodzajId
+                            TextProperty="Nazwa" ValueProperty="Id" />
             <RadzenRequiredValidator Text="Rodzaj zakładu jest wymagany" Component="Rodzaj" />
         </div>
     </div>
