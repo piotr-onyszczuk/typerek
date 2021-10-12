@@ -81,10 +81,9 @@
 }
 
 
-<RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" PageSize="5" AllowPaging="true" AllowSorting="true"
+<RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" FilterMode="FilterMode.Advanced" PageSize="20" AllowPaging="true" AllowSorting="true"
                 Data="@kupony" TItem="KuponItem" LogicalFilterOperator="LogicalFilterOperator.Or" CellRender="@CellRender">
     <Columns>
-        <RadzenDataGridColumn TItem="KuponItem" Property="Id" Title="Id" Width="70px" />
         <RadzenDataGridColumn TItem="KuponItem" Property="DataUtworzenia" Title="Data utworzenia" />
         <RadzenDataGridColumn TItem="KuponItem" Property="LiczbaZdarzen" Title="Liczba zdarzeń" />
         <RadzenDataGridColumn TItem="KuponItem" Property="Kurs" Title="Łączny kurs" />
