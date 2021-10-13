@@ -41,6 +41,7 @@
                 }
                 ).Sum();
 
+
     }
 
     async Task Back()
@@ -55,16 +56,16 @@
         <RadzenLabel Text="@("Kupony wygrane " + KuponyWygrane.ToString())"></RadzenLabel>
     </tr>
     <tr>
-    <RadzenLabel Text="@("Kupony przegrane " + KuponyPrzegrane.ToString())"></RadzenLabel>
+        <RadzenLabel Text="@("Kupony przegrane " + KuponyPrzegrane.ToString())"></RadzenLabel>
     </tr>
     <tr>
-    <RadzenLabel Text="@("Zdarzenia wygrane " + ZdarzeniaWygrane.ToString())"></RadzenLabel>
+        <RadzenLabel Text="@("Zdarzenia wygrane " + ZdarzeniaWygrane.ToString())"></RadzenLabel>
     </tr>
     <tr>
-    <RadzenLabel Text="@("Zdarzenia przegrane " + ZdarzeniaPrzegrane.ToString())"></RadzenLabel>
+        <RadzenLabel Text="@("Zdarzenia przegrane " + ZdarzeniaPrzegrane.ToString())"></RadzenLabel>
     </tr>
     <tr>
-    <RadzenLabel Text="@("Bilans " + Bilans.ToString())"></RadzenLabel>
+        <RadzenLabel Text="@("Bilans " + Bilans.ToString("0.00"))"></RadzenLabel>
     </tr>
 </table>
 
