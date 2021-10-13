@@ -1,0 +1,71 @@
+﻿@page "/statystyki"
+@using Typerek.Database
+@using Radzen
+@using Radzen.Blazor
+@code{
+    [Inject]
+    NavigationManager navigationManager { get; set; }
+
+    [Inject]
+    NotificationService notificationService { get; set; }
+
+    [Inject]
+    DialogService dialogService { get; set; }
+
+    public int KuponyWygrane { get; set; }
+    public int KuponyPrzegrane { get; set; }
+    public int ZdarzeniaWygrane { get; set; }
+    public int ZdarzeniaPrzegrane { get; set; }
+    public decimal Bilans { get; set; }
+    public decimal Stawka { get; set; } = 10;
+
+    protected override void OnInitialized()
+    {
+        Reload();
+    }
+
+    private void Reload()
+    {
+        KuponyWygrane = Startup.entityContext.Kupons.Where(k => k.Wynik.HasValue && k.Wynik.Value == true).Count();
+        KuponyPrzegrane = Startup.entityContext.Kupons.Where(k => k.Wynik.HasValue && k.Wynik.Value == false).Count();
+        ZdarzeniaWygrane = Startup.entityContext.Zdarzenies.Where(z => z.Wynik.HasValue && z.Wynik.Value == true).Count();
+        ZdarzeniaPrzegrane = Startup.entityContext.Zdarzenies.Where(z => z.Wynik.HasValue && z.Wynik.Value == false).Count();
+
+
+        Bilans = Startup.entityContext.Kupons.Where(k => k.Wynik.HasValue).ToList().
+                Select(k =>
+                {
+                    if (k.Wynik.Value == true)
+                        return Stawka * (k.Kurs - 1);
+                    else return -Stawka;
+                }
+                ).Sum();
+
+    }
+
+    async Task Back()
+    {
+        navigationManager.NavigateTo("kupony");
+    }
+
+
+}
+<table>
+    <tr>
+        <RadzenLabel Text="@("Kupony wygrane " + KuponyWygrane.ToString())"></RadzenLabel>
+    </tr>
+    <tr>
+    <RadzenLabel Text="@("Kupony przegrane " + KuponyPrzegrane.ToString())"></RadzenLabel>
+    </tr>
+    <tr>
+    <RadzenLabel Text="@("Zdarzenia wygrane " + ZdarzeniaWygrane.ToString())"></RadzenLabel>
+    </tr>
+    <tr>
+    <RadzenLabel Text="@("Zdarzenia przegrane " + ZdarzeniaPrzegrane.ToString())"></RadzenLabel>
+    </tr>
+    <tr>
+    <RadzenLabel Text="@("Bilans " + Bilans.ToString())"></RadzenLabel>
+    </tr>
+</table>
+
+<RadzenButton ButtonStyle="ButtonStyle.Primary" Click="@(() => Back())" Text="Wróć" />
